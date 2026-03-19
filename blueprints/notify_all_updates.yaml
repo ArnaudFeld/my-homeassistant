@@ -1,6 +1,6 @@
 blueprint:
   name: Update notifications (Alle Updates + Manueller Start)
-  description: "Benachrichtigung für alle verfügbaren Updates (Auto & Manuell) | Version: 2026.02.23"
+  description: "Benachrichtigung für alle verfügbaren Updates (Auto & Manuell) | Version: 2026.03.19"
   homeassistant:
     min_version: 2025.6.0
   domain: automation
@@ -31,6 +31,12 @@ blueprint:
       name: An HA senden
       description: Zusätzlich als persistente Benachrichtigung in HA anzeigen
       default: false
+      selector:
+        boolean: {}
+    show_icon:
+      name: App-Icon anzeigen
+      description: Icon der Integration in der Push-Notification anzeigen
+      default: true
       selector:
         boolean: {}
     reminder_hours:
@@ -128,6 +134,7 @@ variables:
   mobile_app_device_2: !input mobile_app_device_2
   mobile_app_device_3: !input mobile_app_device_3
   send_to_ha: !input send_to_ha
+  show_icon: !input show_icon
   take_backup: !input take_backup
   reminder_hours: !input reminder_hours
   _changelog_urls: !input changelog_urls
@@ -286,7 +293,9 @@ action:
                         channel: !input notification_channel
                         group: !input notification_channel
                         notification_icon: !input status_bar_icon
-                        icon_url: "{{ state_attr(entity_id, 'entity_picture') | default('', true) }}"
+                        icon_url: >-
+                          {{ state_attr(entity_id, 'entity_picture') | default('', true)
+                             if show_icon else '' }}
                         url: "{{ url }}"
                         clickAction: "{{ url }}"
                         sticky: "true"
@@ -313,7 +322,7 @@ action:
                           message: "{{ message_plain if manufacturer_1 == 'Apple' else message_html }}"
                           data: >-
                             {{ dict(send_data, image=send_data.icon_url)
-                               if manufacturer_1 == 'Apple' and send_data.icon_url is string
+                               if manufacturer_1 == 'Apple' and send_data.icon_url is string and send_data.icon_url != ''
                                else send_data }}
                       - if:
                           - condition: template
@@ -325,7 +334,7 @@ action:
                               message: "{{ message_plain if manufacturer_2 == 'Apple' else message_html }}"
                               data: >-
                                 {{ dict(send_data, image=send_data.icon_url)
-                                   if manufacturer_2 == 'Apple' and send_data.icon_url is string
+                                   if manufacturer_2 == 'Apple' and send_data.icon_url is string and send_data.icon_url != ''
                                    else send_data }}
                       - if:
                           - condition: template
@@ -337,7 +346,7 @@ action:
                               message: "{{ message_plain if manufacturer_3 == 'Apple' else message_html }}"
                               data: >-
                                 {{ dict(send_data, image=send_data.icon_url)
-                                   if manufacturer_3 == 'Apple' and send_data.icon_url is string
+                                   if manufacturer_3 == 'Apple' and send_data.icon_url is string and send_data.icon_url != ''
                                    else send_data }}
                   - if:
                       - condition: template
