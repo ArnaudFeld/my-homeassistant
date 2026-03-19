@@ -34,8 +34,8 @@ blueprint:
       selector:
         boolean: {}
     show_icon:
-      name: App-Icon anzeigen
-      description: Icon der Integration in der Push-Notification anzeigen
+      name: Integrations-Icon anzeigen
+      description: Integrations-Icon in der Push-Notification anzeigen
       default: true
       selector:
         boolean: {}

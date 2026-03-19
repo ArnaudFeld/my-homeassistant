@@ -13,7 +13,7 @@ Benachrichtigung für alle verfügbaren HA-Updates per Push-Notification.
 - Erinnerungs-Intervall konfigurierbar
 - Manueller Start möglich
 - Benachrichtigung verschwindet nach Installation
-- App-Icon in Benachrichtigung ein-/ausblendbar
+- Integrations-Icon in Benachrichtigung ein-/ausblendbar
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/notify_all_updates.yaml)
 
@@ -32,6 +32,6 @@ Push notification for all available HA updates.
 - Configurable reminder interval
 - Manual trigger possible
 - Notification clears after installation
-- App icon in notification can be toggled
+- Integration icon in notification can be toggled
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/notify_all_updates.yaml)
