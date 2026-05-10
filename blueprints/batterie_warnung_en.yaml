@@ -1,0 +1,394 @@
+blueprint:
+  name: Battery Level Detection & Notification
+  description: >
+    Regularly checks all sensors with device_class 'battery' for a threshold
+    and sends a notification when exceeded. Supports up to 3 devices, two-level
+    warnings, reminders, time windows and automatic notification cleanup. | Version: 2026.05.10
+  homeassistant:
+    min_version: 2025.6.0
+  domain: automation
+  source_url: https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/batterie_warnung_en.yaml
+  input:
+    mobile_app_device:
+      name: Notification Device (required)
+      description: Primary device with Home Assistant Companion App
+      selector:
+        device:
+          integration: mobile_app
+          multiple: false
+    mobile_app_device_2:
+      name: Notification Device (2)
+      description: Optional second device
+      default:
+      selector:
+        device:
+          integration: mobile_app
+          multiple: false
+    mobile_app_device_3:
+      name: Notification Device (3)
+      description: Optional third device
+      default:
+      selector:
+        device:
+          integration: mobile_app
+          multiple: false
+    send_to_ha:
+      name: Persistent Notification in HA
+      description: >
+        Show a persistent notification in the HA sidebar. Will be automatically
+        dismissed once all batteries are above the threshold.
+      default: true
+      selector:
+        boolean: {}
+    threshold:
+      name: Battery Warning Threshold (normal)
+      description: Sensors below this threshold will receive a normal warning.
+      default: 30
+      selector:
+        number:
+          min: 5.0
+          max: 100.0
+          unit_of_measurement: '%'
+          mode: slider
+          step: 5.0
+    critical_threshold:
+      name: Critical Threshold
+      description: Below this value a critical push notification will be sent.
+      default: 10
+      selector:
+        number:
+          min: 5.0
+          max: 50.0
+          unit_of_measurement: '%'
+          mode: slider
+          step: 5.0
+    normal_interruption_level:
+      name: Priority normal warning
+      description: >
+        time-sensitive = appears prominently, respects Focus modes.
+        active = normal priority.
+        passive = quiet, no sound/vibration.
+      default: time-sensitive
+      selector:
+        select:
+          options:
+            - time-sensitive
+            - active
+            - passive
+    critical_interruption_level:
+      name: Priority critical warning
+      description: >
+        critical = bypasses silent mode and Focus (iOS).
+        time-sensitive = appears prominently without silent bypass.
+        active = normal priority.
+      default: time-sensitive
+      selector:
+        select:
+          options:
+            - critical
+            - time-sensitive
+            - active
+    time:
+      name: Check Time
+      description: Time of day at which the daily check is executed.
+      default: "10:00:00"
+      selector:
+        time: {}
+    day:
+      name: Day of week
+      description: >
+        Daily (0) or on a specific weekday
+        (1: Monday … 7: Sunday).
+      default: 0
+      selector:
+        number:
+          min: 0.0
+          max: 7.0
+          mode: slider
+          step: 1.0
+    only_after:
+      name: Only after time
+      description: Send notifications only after this time.
+      default: "08:00:00"
+      selector:
+        time: {}
+    only_before:
+      name: Only before time
+      description: Send notifications only before this time.
+      default: "22:00:00"
+      selector:
+        time: {}
+    reminder_hours:
+      name: Reminder interval
+      description: >
+        Repeat reminder every X hours while batteries are low
+        (0 = off). At 0 the trigger fires hourly but is immediately
+        blocked by the condition.
+      default: 0
+      selector:
+        number:
+          min: 0.0
+          max: 72.0
+          unit_of_measurement: hours
+          step: 1.0
+          mode: slider
+    notification_channel:
+      name: Channel / Group
+      description: >
+        Channel (Android) and Group (iOS) for notifications.
+        Allows grouping with other maintenance notifications.
+      default: Maintenance
+      selector:
+        text:
+          multiple: false
+          multiline: false
+    exclude:
+      name: Excluded Sensors
+      description: >
+        Battery sensors to ignore (e.g. smartphones).
+        Only entities are supported – devices must be expanded individually!
+      default:
+        entity_id: []
+      selector:
+        target:
+          entity:
+            - device_class:
+                - battery
+variables:
+  day: !input day
+  threshold: !input threshold
+  critical_threshold: !input critical_threshold
+  exclude: !input exclude
+  mobile_app_device: !input mobile_app_device
+  mobile_app_device_2: !input mobile_app_device_2
+  mobile_app_device_3: !input mobile_app_device_3
+  send_to_ha: !input send_to_ha
+  reminder_hours: !input reminder_hours
+  normal_interruption_level: !input normal_interruption_level
+  critical_interruption_level: !input critical_interruption_level
+  notify_service_1: >-
+    {{ 'notify.mobile_app_' ~ (device_attr(mobile_app_device, 'name') | slugify) }}
+  notify_service_2: >-
+    {% if mobile_app_device_2 not in [none, 'none', '', 'null'] and mobile_app_device_2 %}
+      {{ 'notify.mobile_app_' ~ (device_attr(mobile_app_device_2, 'name') | slugify) }}
+    {% else %}
+      {{ '' }}
+    {% endif %}
+  notify_service_3: >-
+    {% if mobile_app_device_3 not in [none, 'none', '', 'null'] and mobile_app_device_3 %}
+      {{ 'notify.mobile_app_' ~ (device_attr(mobile_app_device_3, 'name') | slugify) }}
+    {% else %}
+      {{ '' }}
+    {% endif %}
+  has_device_2: "{{ notify_service_2 | trim != '' }}"
+  has_device_3: "{{ notify_service_3 | trim != '' }}"
+  sensors_normal: >-
+    {% set result = namespace(sensors=[]) %}
+    {% for state in states.sensor | selectattr('attributes.device_class', '==', 'battery') %}
+      {% if critical_threshold | int <= state.state | int(-1) < threshold | int
+         and not state.entity_id in exclude.entity_id %}
+        {% set result.sensors = result.sensors + [state.name ~ ' (' ~ state.state ~ ' %)'] %}
+      {% endif %}
+    {% endfor %}
+    {{ result.sensors | join(', ') }}
+  sensors_critical: >-
+    {% set result = namespace(sensors=[]) %}
+    {% for state in states.sensor | selectattr('attributes.device_class', '==', 'battery') %}
+      {% if 0 <= state.state | int(-1) < critical_threshold | int
+         and not state.entity_id in exclude.entity_id %}
+        {% set result.sensors = result.sensors + [state.name ~ ' (' ~ state.state ~ ' %)'] %}
+      {% endif %}
+    {% endfor %}
+    {% for state in states.binary_sensor | selectattr('attributes.device_class', '==', 'battery') | selectattr('state', '==', 'on') %}
+      {% if not state.entity_id in exclude.entity_id %}
+        {% set result.sensors = result.sensors + [state.name] %}
+      {% endif %}
+    {% endfor %}
+    {{ result.sensors | join(', ') }}
+  sensors_all: >-
+    {% set result = namespace(sensors=[]) %}
+    {% for state in states.sensor | selectattr('attributes.device_class', '==', 'battery') %}
+      {% if 0 <= state.state | int(-1) < threshold | int
+         and not state.entity_id in exclude.entity_id %}
+        {% set result.sensors = result.sensors + [state.name ~ ' (' ~ state.state ~ ' %)'] %}
+      {% endif %}
+    {% endfor %}
+    {% for state in states.binary_sensor | selectattr('attributes.device_class', '==', 'battery') | selectattr('state', '==', 'on') %}
+      {% if not state.entity_id in exclude.entity_id %}
+        {% set result.sensors = result.sensors + [state.name] %}
+      {% endif %}
+    {% endfor %}
+    {{ result.sensors | join(', ') }}
+  count_normal: >-
+    {{ sensors_normal.split(', ') | reject('eq', '') | list | count }}
+  count_critical: >-
+    {{ sensors_critical.split(', ') | reject('eq', '') | list | count }}
+  count_all: >-
+    {{ sensors_all.split(', ') | reject('eq', '') | list | count }}
+
+trigger:
+  - platform: time
+    at: !input time
+    id: scheduled
+  - platform: time_pattern
+    hours: !input reminder_hours
+    id: reminder
+
+condition:
+  - condition: template
+    value_template: >-
+      {{ day | int == 0 or day | int == now().isoweekday() }}
+  - condition: template
+    value_template: >-
+      {{ trigger.id == 'scheduled' or
+         (trigger.id == 'reminder' and reminder_hours | int > 0) }}
+  - condition: time
+    after: !input only_after
+    before: !input only_before
+
+action:
+  # --- All ok: clean up notifications (push + persistent) ---
+  - if:
+      - condition: template
+        value_template: "{{ count_all == 0 }}"
+    then:
+      - service: "{{ notify_service_1 }}"
+        data:
+          message: clear_notification
+          data:
+            tag: battery-warning
+      - service: "{{ notify_service_1 }}"
+        data:
+          message: clear_notification
+          data:
+            tag: battery-critical
+      - if:
+          - condition: template
+            value_template: "{{ has_device_2 }}"
+        then:
+          - service: "{{ notify_service_2 | trim }}"
+            data:
+              message: clear_notification
+              data:
+                tag: battery-warning
+          - service: "{{ notify_service_2 | trim }}"
+            data:
+              message: clear_notification
+              data:
+                tag: battery-critical
+      - if:
+          - condition: template
+            value_template: "{{ has_device_3 }}"
+        then:
+          - service: "{{ notify_service_3 | trim }}"
+            data:
+              message: clear_notification
+              data:
+                tag: battery-warning
+          - service: "{{ notify_service_3 | trim }}"
+            data:
+              message: clear_notification
+              data:
+                tag: battery-critical
+      - if:
+          - condition: template
+            value_template: "{{ send_to_ha }}"
+        then:
+          - action: persistent_notification.dismiss
+            data:
+              notification_id: battery_warning
+
+  - condition: template
+    value_template: "{{ count_all > 0 }}"
+
+  # --- Normal warning (between critical_threshold and threshold) ---
+  - if:
+      - condition: template
+        value_template: "{{ count_normal > 0 }}"
+    then:
+      - variables:
+          notify_data_normal:
+            title: >-
+              🔋 {{ count_normal }} sensor{{ 's' if count_normal > 1 else '' }}
+              with low battery
+            message: "Replace battery in: {{ sensors_normal }}"
+            data:
+              tag: battery-warning
+              channel: !input notification_channel
+              group: !input notification_channel
+              url: /maintenance
+              clickAction: /maintenance
+              push:
+                interruption-level: "{{ normal_interruption_level }}"
+      - service: "{{ notify_service_1 }}"
+        data: "{{ notify_data_normal }}"
+      - if:
+          - condition: template
+            value_template: "{{ has_device_2 }}"
+        then:
+          - service: "{{ notify_service_2 | trim }}"
+            data: "{{ notify_data_normal }}"
+      - if:
+          - condition: template
+            value_template: "{{ has_device_3 }}"
+        then:
+          - service: "{{ notify_service_3 | trim }}"
+            data: "{{ notify_data_normal }}"
+
+  # --- Critical warning (below critical_threshold) ---
+  - if:
+      - condition: template
+        value_template: "{{ count_critical > 0 }}"
+    then:
+      - variables:
+          notify_data_critical:
+            title: >-
+              🪫 {{ count_critical }} sensor{{ 's' if count_critical > 1 else '' }}
+              – Battery critically low!
+            message: "Replace immediately: {{ sensors_critical }}"
+            data:
+              tag: battery-critical
+              channel: !input notification_channel
+              group: !input notification_channel
+              url: /maintenance
+              clickAction: /maintenance
+              push:
+                interruption-level: "{{ critical_interruption_level }}"
+                sound:
+                  name: default
+                  critical: "{{ 1 if critical_interruption_level == 'critical' else 0 }}"
+                  volume: 1.0
+      - service: "{{ notify_service_1 }}"
+        data: "{{ notify_data_critical }}"
+      - if:
+          - condition: template
+            value_template: "{{ has_device_2 }}"
+        then:
+          - service: "{{ notify_service_2 | trim }}"
+            data: "{{ notify_data_critical }}"
+      - if:
+          - condition: template
+            value_template: "{{ has_device_3 }}"
+        then:
+          - service: "{{ notify_service_3 | trim }}"
+            data: "{{ notify_data_critical }}"
+
+  # --- Persistent notification in HA ---
+  - if:
+      - condition: template
+        value_template: "{{ send_to_ha }}"
+    then:
+      - action: persistent_notification.create
+        data:
+          notification_id: battery_warning
+          title: >-
+            🔋 {{ count_all }} sensor{{ 's' if count_all > 1 else '' }}
+            with low battery
+          message: >-
+            {{ sensors_all }}
+            {% if count_critical > 0 %}
+
+            🪫 **Critical (replace immediately!):** {{ sensors_critical }}
+            {% endif %}
+
+mode: single
