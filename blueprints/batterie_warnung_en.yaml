@@ -3,11 +3,10 @@ blueprint:
   description: >
     Regularly checks all sensors with device_class 'battery' for a threshold
     and sends a notification when exceeded. Supports up to 3 devices, two-level
-    warnings, reminders, time windows and automatic notification cleanup. | Version: 2026.05.10
+    warnings, reminders, time windows and automatic notification cleanup. | Version: 2026.05.24
   homeassistant:
     min_version: 2025.6.0
   domain: automation
-  source_url: https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/batterie_warnung_en.yaml
   input:
     mobile_app_device:
       name: Notification Device (required)
@@ -154,6 +153,8 @@ blueprint:
           entity:
             - device_class:
                 - battery
+  source_url: https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/batterie_warnung_en.yaml
+
 variables:
   day: !input day
   threshold: !input threshold
@@ -186,7 +187,17 @@ variables:
     {% set result = namespace(sensors=[]) %}
     {% for state in states.sensor | selectattr('attributes.device_class', '==', 'battery') %}
       {% if critical_threshold | int <= state.state | int(-1) < threshold | int
-         and not state.entity_id in exclude.entity_id %}
+         and not state.entity_id in exclude.entity_id
+         and not (
+           state.entity_id.endswith('_battery_plus')
+           and (
+             states(state.entity_id[:-13] ~ '_battery') not in ['unavailable', 'unknown', 'none', '']
+             or (
+               state_attr(state.entity_id, 'source_entity_id') is not none
+               and states(state_attr(state.entity_id, 'source_entity_id')) not in ['unavailable', 'unknown', '']
+             )
+           )
+         ) %}
         {% set result.sensors = result.sensors + [state.name ~ ' (' ~ state.state ~ ' %)'] %}
       {% endif %}
     {% endfor %}
@@ -195,7 +206,17 @@ variables:
     {% set result = namespace(sensors=[]) %}
     {% for state in states.sensor | selectattr('attributes.device_class', '==', 'battery') %}
       {% if 0 <= state.state | int(-1) < critical_threshold | int
-         and not state.entity_id in exclude.entity_id %}
+         and not state.entity_id in exclude.entity_id
+         and not (
+           state.entity_id.endswith('_battery_plus')
+           and (
+             states(state.entity_id[:-13] ~ '_battery') not in ['unavailable', 'unknown', 'none', '']
+             or (
+               state_attr(state.entity_id, 'source_entity_id') is not none
+               and states(state_attr(state.entity_id, 'source_entity_id')) not in ['unavailable', 'unknown', '']
+             )
+           )
+         ) %}
         {% set result.sensors = result.sensors + [state.name ~ ' (' ~ state.state ~ ' %)'] %}
       {% endif %}
     {% endfor %}
@@ -209,7 +230,17 @@ variables:
     {% set result = namespace(sensors=[]) %}
     {% for state in states.sensor | selectattr('attributes.device_class', '==', 'battery') %}
       {% if 0 <= state.state | int(-1) < threshold | int
-         and not state.entity_id in exclude.entity_id %}
+         and not state.entity_id in exclude.entity_id
+         and not (
+           state.entity_id.endswith('_battery_plus')
+           and (
+             states(state.entity_id[:-13] ~ '_battery') not in ['unavailable', 'unknown', 'none', '']
+             or (
+               state_attr(state.entity_id, 'source_entity_id') is not none
+               and states(state_attr(state.entity_id, 'source_entity_id')) not in ['unavailable', 'unknown', '']
+             )
+           )
+         ) %}
         {% set result.sensors = result.sensors + [state.name ~ ' (' ~ state.state ~ ' %)'] %}
       {% endif %}
     {% endfor %}
