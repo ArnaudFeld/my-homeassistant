@@ -1,10 +1,9 @@
 blueprint:
   name: Update notifications (Alle Updates + Manueller Start)
-  description: "Benachrichtigung für alle verfügbaren Updates (Auto & Manuell) | Version: 2026.03.19"
+  description: "Benachrichtigung für alle verfügbaren Updates (Auto & Manuell) | Version: 2026.05.25"
   homeassistant:
     min_version: 2025.6.0
   domain: automation
-  source_url: https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/notify_all_updates_de.yaml
   input:
     mobile_app_device:
       name: Gerät für Benachrichtigungen (Pflicht)
@@ -267,6 +266,16 @@ action:
                   changelog: >-
                     {{ changelog_base | default(changelog_urls[entity_id] | default(''), true) }}
                   in_progress: "{{ state_attr(entity_id, 'in_progress') }}"
+                  category_icon: >-
+                    {%- if ids[0] == 'hassio' -%}
+                      {%- if ids[1] == 'core' -%}🏠
+                      {%- elif ids[1] == 'supervisor' -%}⚙️
+                      {%- elif ids[1] == 'OS' -%}🖥️
+                      {%- else -%}🧩
+                      {%- endif -%}
+                    {%- elif ids[0] == 'hacs' -%}📦
+                    {%- else -%}🔌
+                    {%- endif %}
                   url: >-
                     {% set url = device_attr(entity_id, 'configuration_url') %}
                     {% if url is string %}
@@ -319,7 +328,7 @@ action:
                           send_data: "{{ dict(notify_data, action_data={'tag': notify_data.tag}) }}"
                       - service: "{{ notify_service_1 }}"
                         data:
-                          title: "{{ title }}"
+                          title: "{{ category_icon }} {{ title }}"
                           message: "{{ message_plain if manufacturer_1 == 'Apple' else message_html }}"
                           data: >-
                             {{ dict(send_data, image=send_data.icon_url)
@@ -331,7 +340,7 @@ action:
                         then:
                           - service: "{{ notify_service_2 | trim }}"
                             data:
-                              title: "{{ title }}"
+                              title: "{{ category_icon }} {{ title }}"
                               message: "{{ message_plain if manufacturer_2 == 'Apple' else message_html }}"
                               data: >-
                                 {{ dict(send_data, image=send_data.icon_url)
@@ -343,7 +352,7 @@ action:
                         then:
                           - service: "{{ notify_service_3 | trim }}"
                             data:
-                              title: "{{ title }}"
+                              title: "{{ category_icon }} {{ title }}"
                               message: "{{ message_plain if manufacturer_3 == 'Apple' else message_html }}"
                               data: >-
                                 {{ dict(send_data, image=send_data.icon_url)
@@ -356,7 +365,7 @@ action:
                       - service: persistent_notification.create
                         data:
                           notification_id: "{{ entity_id[7:] }}"
-                          title: "{{ title }}"
+                          title: "{{ category_icon }} {{ title }}"
                           message: >-
                             {{ message_plain }}
 
@@ -377,7 +386,7 @@ action:
                           tag: "{{ entity_id[7:] }}"
                   - service: "{{ notify_service_1 }}"
                     data:
-                      title: "{{ title }}"
+                      title: "{{ category_icon }} {{ title }}"
                       message: "{{ update_message }}"
                       data: "{{ send_update_data }}"
                   - if:
@@ -386,7 +395,7 @@ action:
                     then:
                       - service: "{{ notify_service_2 | trim }}"
                         data:
-                          title: "{{ title }}"
+                          title: "{{ category_icon }} {{ title }}"
                           message: "{{ update_message }}"
                           data: "{{ send_update_data }}"
                   - if:
@@ -395,6 +404,6 @@ action:
                     then:
                       - service: "{{ notify_service_3 | trim }}"
                         data:
-                          title: "{{ title }}"
+                          title: "{{ category_icon }} {{ title }}"
                           message: "{{ update_message }}"
                           data: "{{ send_update_data }}"
