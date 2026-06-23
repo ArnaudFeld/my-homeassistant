@@ -1,6 +1,6 @@
 blueprint:
   name: Update notifications (All updates + manual trigger)
-  description: "Notification for all available updates (auto & manual) | Version: 2026.05.25"
+  description: "Notification for all available updates (auto & manual) | Version: 2026.06.23"
   homeassistant:
     min_version: 2025.6.0
   domain: automation
