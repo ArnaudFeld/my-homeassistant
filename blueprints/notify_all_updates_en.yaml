@@ -175,26 +175,92 @@ action:
       conditions: "{{ trigger.id in ['install', 'install_ios'] }}"
       sequence:
         - variables:
-            entity_id: >-
-              update.{{ trigger.event.data.tag
-              if trigger.event.data.tag is string and trigger.event.data.tag != ''
-              else trigger.event.data.action_data.tag }}
+            notification_tag: >-
+              {% if trigger.event.data.tag is string and trigger.event.data.tag != '' %}
+                {{ trigger.event.data.tag }}
+              {% elif trigger.event.data.action_data is mapping and trigger.event.data.action_data.tag is defined %}
+                {{ trigger.event.data.action_data.tag }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            entity_id: "update.{{ notification_tag }}"
         - service: update.install
           data:
             entity_id: "{{ entity_id }}"
             backup: >-
               {% set ids = device_attr(entity_id, 'identifiers') | first %}
               {{ take_backup and ids[0] == 'hassio' and ids[1] not in ['supervisor', 'OS'] }}
+        - if:
+            - condition: template
+              value_template: "{{ notification_tag != '' }}"
+          then:
+            - service: "{{ notify_service_1 }}"
+              data:
+                message: clear_notification
+                data:
+                  tag: "{{ notification_tag }}"
+            - if:
+                - condition: template
+                  value_template: "{{ has_device_2 }}"
+              then:
+                - service: "{{ notify_service_2 | trim }}"
+                  data:
+                    message: clear_notification
+                    data:
+                      tag: "{{ notification_tag }}"
+            - if:
+                - condition: template
+                  value_template: "{{ has_device_3 }}"
+              then:
+                - service: "{{ notify_service_3 | trim }}"
+                  data:
+                    message: clear_notification
+                    data:
+                      tag: "{{ notification_tag }}"
 
     - alias: Skip update action
       conditions: "{{ trigger.id in ['skip', 'skip_ios'] }}"
       sequence:
+        - variables:
+            notification_tag: >-
+              {% if trigger.event.data.tag is string and trigger.event.data.tag != '' %}
+                {{ trigger.event.data.tag }}
+              {% elif trigger.event.data.action_data is mapping and trigger.event.data.action_data.tag is defined %}
+                {{ trigger.event.data.action_data.tag }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            entity_id: "update.{{ notification_tag }}"
         - service: update.skip
           data:
-            entity_id: >-
-              update.{{ trigger.event.data.tag
-              if trigger.event.data.tag is string and trigger.event.data.tag != ''
-              else trigger.event.data.action_data.tag }}
+            entity_id: "{{ entity_id }}"
+        - if:
+            - condition: template
+              value_template: "{{ notification_tag != '' }}"
+          then:
+            - service: "{{ notify_service_1 }}"
+              data:
+                message: clear_notification
+                data:
+                  tag: "{{ notification_tag }}"
+            - if:
+                - condition: template
+                  value_template: "{{ has_device_2 }}"
+              then:
+                - service: "{{ notify_service_2 | trim }}"
+                  data:
+                    message: clear_notification
+                    data:
+                      tag: "{{ notification_tag }}"
+            - if:
+                - condition: template
+                  value_template: "{{ has_device_3 }}"
+              then:
+                - service: "{{ notify_service_3 | trim }}"
+                  data:
+                    message: clear_notification
+                    data:
+                      tag: "{{ notification_tag }}"
 
     - alias: Update completed
       conditions: "{{ trigger.id == 'done' }}"
@@ -257,14 +323,20 @@ action:
             sequence:
               - variables:
                   entity_id: "{{ repeat.item }}"
-                  ids: "{{ device_attr(entity_id, 'identifiers') | first }}"
+                  ids: "{{ device_attr(entity_id, 'identifiers') | default([['none','none']], true) | first }}"
                   title: "{{ state_attr(entity_id, 'friendly_name') }}"
                   installed: "{{ state_attr(entity_id, 'installed_version') }}"
                   latest: "{{ state_attr(entity_id, 'latest_version') }}"
                   summary: "{{ state_attr(entity_id, 'release_summary') }}"
                   changelog_base: "{{ state_attr(entity_id, 'release_url') }}"
+                  hacs_repo: >-
+                    {% if ids[0] == 'hacs' and ids[1] is string %}
+                      https://github.com/{{ ids[1] }}
+                    {% else %}
+                      {{ '' }}
+                    {% endif %}
                   changelog: >-
-                    {{ changelog_base | default(changelog_urls[entity_id] | default(''), true) }}
+                    {{ changelog_base | default(changelog_urls[entity_id] | default(hacs_repo, true), true) }}
                   in_progress: "{{ state_attr(entity_id, 'in_progress') }}"
                   category_icon: >-
                     {%- if ids[0] == 'hassio' -%}
@@ -279,39 +351,62 @@ action:
                   url: >-
                     {% set url = device_attr(entity_id, 'configuration_url') %}
                     {% if url is string %}
-                    {{ url | regex_replace('^homeassistant://') }}
+                      {% set raw_path = url | regex_replace('^homeassistant://') %}
+                      {{ raw_path if raw_path.startswith('/') or raw_path.startswith('http') else '/' ~ raw_path }}
                     {% elif ids[0] == 'hassio' and ids[1] in ['supervisor', 'OS'] %}
-                    /hassio/system
+                      /hassio/system
                     {% else %}
-                    /config/updates
+                      /config/updates
                     {% endif %}
+                  icon_path: >-
+                    {{ state_attr(entity_id, 'entity_picture') | default('', true) if show_icon else '' }}
               - if:
                   - condition: template
                     value_template: "{{ not in_progress }}"
                 then:
                   - variables:
+                      cleaned_summary: >-
+                        {% if summary is string %}
+                          {% set text = summary | regex_replace('<(?!br\s*/?>)[^>]+>', '') %}
+                          {{ text[:1000] ~ '... (shortened)' if text | length > 1000 else text }}
+                        {% else %}
+                          {{ '' }}
+                        {% endif %}
                       message_html: >-
                         New version: {{ latest }}<br>
                         Installed: {{ installed }}
-                        {% if summary is string %}<br>{{ summary }}{% endif %}
+                        {% if cleaned_summary | trim != '' %}<br>{{ cleaned_summary }}{% endif %}
                       message_plain: >-
                         New version: {{ latest }}
                         Installed: {{ installed }}
-                        {% if summary is string %}{{ summary }}{% endif %}
-                      notify_data:
+                        {% if cleaned_summary | trim != '' %}{{ cleaned_summary }}{% endif %}
+                      
+                      notify_data_android:
                         tag: "{{ entity_id[7:] }}"
                         channel: !input notification_channel
-                        group: !input notification_channel
                         notification_icon: !input status_bar_icon
-                        icon_url: >-
-                          {{ state_attr(entity_id, 'entity_picture') | default('', true)
-                             if show_icon else '' }}
+                        icon_url: "{{ icon_path }}"
                         url: "{{ url }}"
                         clickAction: "{{ url }}"
-                        sticky: "true"
                         actions: >-
                           {% set actions = [] %}
-                          {% if changelog %}
+                          {% if changelog is string and changelog | trim != '' %}
+                            {% set actions = actions + [{'action': 'URI', 'title': 'Changelog', 'uri': changelog}] %}
+                          {% endif %}
+                          {% set actions = actions + [{'action': 'install-update', 'title': 'Install'}] %}
+                          {% if not (ids[0] == 'hassio' and ids[1] == 'supervisor') %}
+                            {% set actions = actions + [{'action': 'skip-update', 'title': 'Skip'}] %}
+                          {% endif %}
+                          {{ actions }}
+
+                      notify_data_ios:
+                        tag: "{{ entity_id[7:] }}"
+                        group: !input notification_channel
+                        url: "{{ url }}"
+                        clickAction: "{{ url }}"
+                        actions: >-
+                          {% set actions = [] %}
+                          {% if changelog is string and changelog | trim != '' %}
                             {% set actions = actions + [{'action': 'URI', 'title': 'Changelog', 'uri': changelog}] %}
                           {% endif %}
                           {% set actions = actions + [{'action': 'install-update', 'title': 'Install', 'destructive': true, 'authenticationRequired': true}] %}
@@ -324,16 +419,19 @@ action:
                         after: !input only_after
                         before: !input only_before
                     then:
-                      - variables:
-                          send_data: "{{ dict(notify_data, action_data={'tag': notify_data.tag}) }}"
+                      # --- DEVICE 1 ---
                       - service: "{{ notify_service_1 }}"
                         data:
                           title: "{{ category_icon }} {{ title }}"
                           message: "{{ message_plain if manufacturer_1 == 'Apple' else message_html }}"
                           data: >-
-                            {{ dict(send_data, image=send_data.icon_url)
-                               if manufacturer_1 == 'Apple' and send_data.icon_url is string and send_data.icon_url != ''
-                               else send_data }}
+                            {% if manufacturer_1 == 'Apple' %}
+                              {{ dict(notify_data_ios, action_data={'tag': notify_data_ios.tag}, image=icon_path) if icon_path != '' else dict(notify_data_ios, action_data={'tag': notify_data_ios.tag}) }}
+                            {% else %}
+                              {{ dict(notify_data_android, action_data={'tag': notify_data_android.tag}) }}
+                            {% endif %}
+
+                      # --- DEVICE 2 ---
                       - if:
                           - condition: template
                             value_template: "{{ has_device_2 }}"
@@ -343,9 +441,13 @@ action:
                               title: "{{ category_icon }} {{ title }}"
                               message: "{{ message_plain if manufacturer_2 == 'Apple' else message_html }}"
                               data: >-
-                                {{ dict(send_data, image=send_data.icon_url)
-                                   if manufacturer_2 == 'Apple' and send_data.icon_url is string and send_data.icon_url != ''
-                                   else send_data }}
+                                {% if manufacturer_2 == 'Apple' %}
+                                  {{ dict(notify_data_ios, action_data={'tag': notify_data_ios.tag}, image=icon_path) if icon_path != '' else dict(notify_data_ios, action_data={'tag': notify_data_ios.tag}) }}
+                                {% else %}
+                                  {{ dict(notify_data_android, action_data={'tag': notify_data_android.tag}) }}
+                                {% endif %}
+
+                      # --- DEVICE 3 ---
                       - if:
                           - condition: template
                             value_template: "{{ has_device_3 }}"
@@ -355,9 +457,11 @@ action:
                               title: "{{ category_icon }} {{ title }}"
                               message: "{{ message_plain if manufacturer_3 == 'Apple' else message_html }}"
                               data: >-
-                                {{ dict(send_data, image=send_data.icon_url)
-                                   if manufacturer_3 == 'Apple' and send_data.icon_url is string and send_data.icon_url != ''
-                                   else send_data }}
+                                {% if manufacturer_3 == 'Apple' %}
+                                  {{ dict(notify_data_ios, action_data={'tag': notify_data_ios.tag}, image=icon_path) if icon_path != '' else dict(notify_data_ios, action_data={'tag': notify_data_ios.tag}) }}
+                                {% else %}
+                                  {{ dict(notify_data_android, action_data={'tag': notify_data_android.tag}) }}
+                                {% endif %}
                   - if:
                       - condition: template
                         value_template: "{{ send_to_ha }}"
@@ -367,10 +471,12 @@ action:
                           notification_id: "{{ entity_id[7:] }}"
                           title: "{{ category_icon }} {{ title }}"
                           message: >-
-                            {{ message_plain }}
+                            New version: {{ latest }}
+                            Installed: {{ installed }}
+                            {% if summary is string %}{{ summary }}{% endif %}
 
                             [Open]({{ url }})
-                            {% if changelog %}[Changelog]({{ changelog }}){% endif %}
+                            {% if changelog is string and changelog | trim != '' %}[Changelog]({{ changelog }}){% endif %}
               - if:
                   - condition: template
                     value_template: "{{ in_progress }}"
