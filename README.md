@@ -36,6 +36,21 @@ Regelmäßige Prüfung aller Batteriesensoren mit zweistufiger Warnung und autom
 
 ---
 
+### ⚽ TeamTracker Spiel-Benachrichtigungen
+Push-Benachrichtigungen für ein per TeamTracker-Integration getracktes Fußball-Team.
+
+- Bis zu 3 Geräte (1 Pflicht, 2 optional)
+- Anstoß-Erinnerung mit konfigurierbarer Vorlaufzeit
+- Benachrichtigung bei Spielbeginn
+- Halbzeitstand
+- Tore (eigene & Gegentore), jeweils mit Einordnung (Führung übernommen / Ausgleich / Vorsprung ausgebaut / verkürzt)
+- Endstand inkl. Sieg / Niederlage / Unentschieden
+- Alle Benachrichtigungstypen einzeln ein-/ausschaltbar
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/teamtracker_push_de.yaml)
+
+---
+
 ---
 
 A collection of my Home Assistant blueprints, automations, and whatever else comes up.
@@ -71,3 +86,18 @@ Regular check of all battery sensors with two-level warnings and automatic notif
 - Sensors can be excluded (e.g. smartphones)
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/batterie_warnung_en.yaml)
+
+---
+
+### ⚽ TeamTracker Game Notifications
+Push notifications for a soccer team tracked via the TeamTracker integration.
+
+- Up to 3 devices (1 required, 2 optional)
+- Kickoff reminder with configurable lead time
+- Notification when the game starts
+- Halftime score
+- Goals (yours & opponent's), each labeled (took the lead / equalized / extended the lead / reduced the gap)
+- Final score including win / loss / draw
+- All notification types can be toggled individually
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/teamtracker_push_en.yaml)

@@ -1,0 +1,370 @@
+blueprint:
+  name: "TeamTracker: Fußball Spiel-Benachrichtigungen"
+  description: >
+    Schickt Mobile-App-Benachrichtigungen für ein per TeamTracker-Integration
+    getracktes Team:
+
+    - Erinnerung X Minuten vor Anstoß
+
+    - Benachrichtigung bei Spielbeginn
+
+    - Halbzeitstand
+
+    - Tore (eigene & Gegentore, jeweils mit Einordnung: Führung / Ausgleich /
+      Vorsprung ausgebaut / verkürzt)
+
+    - Endstand inkl. Sieg / Niederlage / Unentschieden
+
+
+    Voraussetzung: Die TeamTracker-Integration (vasqued2/ha-teamtracker, via
+    HACS) muss bereits eingerichtet sein und einen Sensor für dein Team
+    liefern.
+
+
+    Voraussetzung Benachrichtigungen: Die ausgewählten Geräte müssen die
+    Home Assistant Companion App installiert und bereits mit dieser
+    HA-Instanz verbunden haben, sodass ein funktionierender
+    "notify.mobile_app_<gerätename>"-Service existiert. Ohne das schlägt
+    die Benachrichtigung fehl.
+
+
+    Es können bis zu 3 Geräte für Benachrichtigungen ausgewählt werden
+    (1 Pflicht, 2 optional).
+
+
+    Hinweis zur Halbzeit-Erkennung: Sie basiert auf dem Wechsel des
+    "quarter"-Attributs von 1 auf 2. Je nach Liga/API kann der Wert leicht
+    abweichend befüllt sein (Zahl statt Text o.ä.) - im Zweifel im
+    Entwicklerwerkzeug > Zustände den genauen Attributwert während eines
+    laufenden Spiels prüfen und ggf. anpassen.
+
+
+    Bekannte Einschränkungen:
+
+    - Eigenes Tor und Gegentor teilen sich einen gemeinsamen Schalter
+      (notify_goal), keine getrennte Ein-/Ausschaltung.
+
+    - Die Einordnung der Tor-Nachricht (Führung übernommen / Ausgleich /
+      Vorsprung ausgebaut / verkürzt) geht von Score-Schritten in
+      1er-Schritten aus. Bei einem Datensprung um mehr als 1 Tor in einem
+      API-Update kann die Einordnung ungenau sein - der angezeigte
+      Spielstand selbst ist davon nicht betroffen.
+
+    - Die Anstoß-Erinnerung nutzt einen minütlichen Zeit-Trigger
+      (time_pattern), um die dynamische Restzeit bis zum Anstoß zu prüfen.
+      Das ist technisch bedingt (HA bietet keinen nativen "X Minuten vor
+      einem dynamischen Zukunftswert"-Trigger) und kein Fehler, auch wenn
+      die Automation dadurch im Logbook minütlich als "ausgelöst"
+      erscheint.
+  domain: automation
+  source_url: https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/teamtracker_push_de.yaml
+  input:
+    team_sensor:
+      name: TeamTracker Sensor
+      description: Der Sensor deines Teams (aus der TeamTracker-Integration).
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              integration: teamtracker
+
+    mobile_app_device:
+      name: Gerät für Benachrichtigungen (Pflicht)
+      description: Hauptgerät mit Home Assistant Companion App.
+      selector:
+        device:
+          filter:
+            - integration: mobile_app
+
+    mobile_app_device_2:
+      name: Gerät für Benachrichtigungen (2)
+      description: Optionales zweites Gerät.
+      default: null
+      selector:
+        device:
+          filter:
+            - integration: mobile_app
+
+    mobile_app_device_3:
+      name: Gerät für Benachrichtigungen (3)
+      description: Optionales drittes Gerät.
+      default: null
+      selector:
+        device:
+          filter:
+            - integration: mobile_app
+
+    notify_kickoff_reminder:
+      name: Anstoß-Erinnerung aktiv
+      description: Erinnerung X Minuten vor Spielbeginn senden.
+      default: true
+      selector:
+        boolean:
+
+    kickoff_reminder_minutes:
+      name: Vorlaufzeit Anstoß-Erinnerung
+      description: Wie viele Minuten vor Anstoß erinnert werden soll.
+      default: 30
+      selector:
+        number:
+          min: 1
+          max: 180
+          unit_of_measurement: Minuten
+          mode: box
+
+    notify_kickoff:
+      name: Anstoß-Benachrichtigung aktiv
+      description: Benachrichtigung, wenn das Spiel tatsächlich beginnt (PRE -> IN).
+      default: true
+      selector:
+        boolean:
+
+    notify_halftime:
+      name: Halbzeit-Benachrichtigung aktiv
+      description: Benachrichtigung mit dem Halbzeitstand.
+      default: true
+      selector:
+        boolean:
+
+    notify_goal:
+      name: Tor-Benachrichtigungen aktiv
+      description: >
+        Benachrichtigung bei eigenem Tor UND Gegentor, jeweils mit Einordnung
+        (Führung / Ausgleich / Vorsprung ausgebaut / verkürzt).
+      default: true
+      selector:
+        boolean:
+
+    notify_final:
+      name: Endstand-Benachrichtigung aktiv
+      description: >
+        Benachrichtigung bei Spielende mit Endstand und Ergebnis
+        (Sieg / Niederlage / Unentschieden).
+      default: true
+      selector:
+        boolean:
+
+mode: queued
+max: 5
+
+variables:
+  team_sensor: !input team_sensor
+  notify_kickoff_reminder: !input notify_kickoff_reminder
+  kickoff_reminder_minutes: !input kickoff_reminder_minutes
+  notify_kickoff: !input notify_kickoff
+  notify_halftime: !input notify_halftime
+  notify_goal: !input notify_goal
+  notify_final: !input notify_final
+  mobile_app_device: !input mobile_app_device
+  mobile_app_device_2: !input mobile_app_device_2
+  mobile_app_device_3: !input mobile_app_device_3
+  notify_service_1: >-
+    {{ 'notify.mobile_app_' ~ (device_attr(mobile_app_device, 'name') | slugify) }}
+  notify_service_2: >-
+    {% if mobile_app_device_2 not in [none, 'none', '', 'null'] and mobile_app_device_2 %}
+      {{ 'notify.mobile_app_' ~ (device_attr(mobile_app_device_2, 'name') | slugify) }}
+    {% else %}
+      {{ '' }}
+    {% endif %}
+  notify_service_3: >-
+    {% if mobile_app_device_3 not in [none, 'none', '', 'null'] and mobile_app_device_3 %}
+      {{ 'notify.mobile_app_' ~ (device_attr(mobile_app_device_3, 'name') | slugify) }}
+    {% else %}
+      {{ '' }}
+    {% endif %}
+  notify_services: >-
+    {{ [notify_service_1, notify_service_2 | trim, notify_service_3 | trim]
+       | select('ne', '') | list }}
+
+triggers:
+  - trigger: time_pattern
+    minutes: "/1"
+    id: kickoff_reminder
+
+  - trigger: state
+    entity_id: !input team_sensor
+    from: PRE
+    to: IN
+    id: kickoff_start
+
+  - trigger: state
+    entity_id: !input team_sensor
+    attribute: quarter
+    to: "2"
+    id: halftime
+
+  - trigger: state
+    entity_id: !input team_sensor
+    attribute: team_score
+    id: goal_team
+
+  - trigger: state
+    entity_id: !input team_sensor
+    attribute: opponent_score
+    id: goal_opponent
+
+  - trigger: state
+    entity_id: !input team_sensor
+    from: IN
+    to: POST
+    id: final
+
+conditions: []
+
+actions:
+  - choose:
+      # --- Anstoß-Erinnerung (X Minuten vorher) ---
+      - conditions:
+          - condition: trigger
+            id: kickoff_reminder
+          - condition: template
+            value_template: "{{ notify_kickoff_reminder }}"
+          - condition: state
+            entity_id: !input team_sensor
+            state: PRE
+          - condition: template
+            # Spieltag-Check: bricht an allen Tagen ohne Spiel sofort ab,
+            # bevor die teurere Zeitdifferenz-Berechnung läuft.
+            value_template: >
+              {% set game_date = state_attr(team_sensor, 'date') %}
+              {{ game_date is not none and as_datetime(game_date).date() == now().date() }}
+          - condition: template
+            value_template: >
+              {% set game_date = state_attr(team_sensor, 'date') %}
+              {{ game_date is not none and
+                 ((as_timestamp(game_date) - as_timestamp(now())) / 60)
+                 | round(0, 'common') == kickoff_reminder_minutes | int }}
+        sequence:
+          - repeat:
+              for_each: "{{ notify_services }}"
+              sequence:
+                - service: "{{ repeat.item }}"
+                  data:
+                    title: "⏰ Anstoß in Kürze"
+                    message: >
+                      {{ state_attr(team_sensor, 'team_name') }} gegen
+                      {{ state_attr(team_sensor, 'opponent_name') }} beginnt in
+                      {{ kickoff_reminder_minutes }} Minuten.
+
+      # --- Spielbeginn ---
+      - conditions:
+          - condition: trigger
+            id: kickoff_start
+          - condition: template
+            value_template: "{{ notify_kickoff }}"
+        sequence:
+          - repeat:
+              for_each: "{{ notify_services }}"
+              sequence:
+                - service: "{{ repeat.item }}"
+                  data:
+                    title: "⚽ Anstoß!"
+                    message: >
+                      {{ state_attr(team_sensor, 'team_name') }} gegen
+                      {{ state_attr(team_sensor, 'opponent_name') }} hat begonnen.
+
+      # --- Halbzeit ---
+      - conditions:
+          - condition: trigger
+            id: halftime
+          - condition: template
+            value_template: "{{ notify_halftime }}"
+        sequence:
+          - repeat:
+              for_each: "{{ notify_services }}"
+              sequence:
+                - service: "{{ repeat.item }}"
+                  data:
+                    title: "🟨 Halbzeit"
+                    message: >
+                      Halbzeitstand: {{ state_attr(team_sensor, 'team_name') }}
+                      {{ state_attr(team_sensor, 'team_score') }} :
+                      {{ state_attr(team_sensor, 'opponent_score') }}
+                      {{ state_attr(team_sensor, 'opponent_name') }}
+
+      # --- Eigenes Tor ---
+      - conditions:
+          - condition: trigger
+            id: goal_team
+          - condition: template
+            value_template: "{{ notify_goal }}"
+          - condition: state
+            entity_id: !input team_sensor
+            state: IN
+        sequence:
+          - repeat:
+              for_each: "{{ notify_services }}"
+              sequence:
+                - service: "{{ repeat.item }}"
+                  data:
+                    title: "⚽ Tor!"
+                    message: >
+                      {% set old = trigger.from_state.attributes.team_score | int(0) %}
+                      {% set new = trigger.to_state.attributes.team_score | int(0) %}
+                      {% set opp = trigger.to_state.attributes.opponent_score | int(0) %}
+                      {% if old == opp %}
+                        {{ state_attr(team_sensor, 'team_name') }} geht in Führung!
+                      {% elif old < opp and new == opp %}
+                        Ausgleich durch {{ state_attr(team_sensor, 'team_name') }}!
+                      {% elif old < opp and new < opp %}
+                        {{ state_attr(team_sensor, 'team_name') }} verkürzt den Rückstand!
+                      {% else %}
+                        {{ state_attr(team_sensor, 'team_name') }} baut die Führung aus!
+                      {% endif %}
+                      Spielstand: {{ new }} : {{ opp }}
+                      ({{ state_attr(team_sensor, 'opponent_name') }})
+
+      # --- Gegentor ---
+      - conditions:
+          - condition: trigger
+            id: goal_opponent
+          - condition: template
+            value_template: "{{ notify_goal }}"
+          - condition: state
+            entity_id: !input team_sensor
+            state: IN
+        sequence:
+          - repeat:
+              for_each: "{{ notify_services }}"
+              sequence:
+                - service: "{{ repeat.item }}"
+                  data:
+                    title: "⚠️ Gegentor"
+                    message: >
+                      {% set old_opp = trigger.from_state.attributes.opponent_score | int(0) %}
+                      {% set new_opp = trigger.to_state.attributes.opponent_score | int(0) %}
+                      {% set team = trigger.to_state.attributes.team_score | int(0) %}
+                      {% if team == old_opp %}
+                        {{ state_attr(team_sensor, 'opponent_name') }} geht in Führung!
+                      {% elif team > old_opp and team == new_opp %}
+                        {{ state_attr(team_sensor, 'opponent_name') }} gleicht aus!
+                      {% elif team > old_opp and team > new_opp %}
+                        {{ state_attr(team_sensor, 'opponent_name') }} verkürzt den Rückstand!
+                      {% else %}
+                        {{ state_attr(team_sensor, 'opponent_name') }} baut die Führung aus!
+                      {% endif %}
+                      Spielstand: {{ team }} : {{ new_opp }}
+                      ({{ state_attr(team_sensor, 'team_name') }})
+
+      # --- Endstand ---
+      - conditions:
+          - condition: trigger
+            id: final
+          - condition: template
+            value_template: "{{ notify_final }}"
+        sequence:
+          - repeat:
+              for_each: "{{ notify_services }}"
+              sequence:
+                - service: "{{ repeat.item }}"
+                  data:
+                    title: "🏁 Abpfiff"
+                    message: >
+                      {% set team_won = state_attr(team_sensor, 'team_winner') %}
+                      {% set opp_won = state_attr(team_sensor, 'opponent_winner') %}
+                      {% set result = 'Sieg!' if team_won else ('Niederlage' if opp_won else 'Unentschieden') %}
+                      Endstand: {{ state_attr(team_sensor, 'team_name') }}
+                      {{ state_attr(team_sensor, 'team_score') }} :
+                      {{ state_attr(team_sensor, 'opponent_score') }}
+                      {{ state_attr(team_sensor, 'opponent_name') }} - {{ result }}
+    default: []
