@@ -2,7 +2,9 @@ blueprint:
   name: "TeamTracker: Soccer Game Notifications"
   description: >
     Sends mobile app notifications for a team tracked by the TeamTracker
-    integration:
+    integration. | Version: 2026.06.26
+
+    The following events are supported:
 
     - Reminder X minutes before kickoff
 

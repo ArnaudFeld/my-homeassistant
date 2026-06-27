@@ -2,8 +2,9 @@ blueprint:
   name: Battery Level Detection & Notification
   description: >
     Regularly checks all sensors with device_class 'battery' for a threshold
-    and sends a notification when exceeded. Supports up to 3 devices, two-level
-    warnings, reminders, time windows and automatic notification cleanup. | Version: 2026.05.24
+    and sends a notification when exceeded. | Version: 2026.05.24 - Supports
+    up to 3 devices, two-level warnings, reminders, time windows and
+    automatic notification cleanup.
   homeassistant:
     min_version: 2025.6.0
   domain: automation

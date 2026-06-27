@@ -2,7 +2,9 @@ blueprint:
   name: "TeamTracker: Fußball Spiel-Benachrichtigungen"
   description: >
     Schickt Mobile-App-Benachrichtigungen für ein per TeamTracker-Integration
-    getracktes Team:
+    getracktes Team. | Version: 2026.06.26
+
+    Folgende Ereignisse werden unterstützt:
 
     - Erinnerung X Minuten vor Anstoß
 

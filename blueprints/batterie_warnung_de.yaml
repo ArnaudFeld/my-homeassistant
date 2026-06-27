@@ -2,9 +2,9 @@ blueprint:
   name: Batteriestand-Erkennung & Benachrichtigung
   description: >
     Prüft regelmäßig alle Sensoren mit device_class 'battery' auf einen
-    Schwellenwert und führt bei Unterschreitung eine Benachrichtigung aus.
-    Unterstützt bis zu 3 Geräte, zweistufige Warnung, Erinnerungen,
-    Zeitfenster und automatisches Aufräumen der Notification. | Version: 2026.05.24
+    Schwellenwert und führt bei Unterschreitung eine Benachrichtigung aus. |
+    Version: 2026.05.24 - Unterstützt bis zu 3 Geräte, zweistufige Warnung,
+    Erinnerungen, Zeitfenster und automatisches Aufräumen der Notification.
   homeassistant:
     min_version: 2025.6.0
   domain: automation
