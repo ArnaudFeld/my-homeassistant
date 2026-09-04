@@ -359,9 +359,9 @@ actions:
                   data:
                     title: "🏁 Final whistle"
                     message: >
-                      {% set team_won = state_attr(team_sensor, 'team_winner') %}
-                      {% set opp_won = state_attr(team_sensor, 'opponent_winner') %}
-                      {% set result = 'Win!' if team_won else ('Loss' if opp_won else 'Draw') %}
+                      {% set team = state_attr(team_sensor, 'team_score') | int(0) %}
+                      {% set opp = state_attr(team_sensor, 'opponent_score') | int(0) %}
+                      {% set result = 'Win!' if team > opp else ('Loss' if team < opp else 'Draw') %}
                       Final score: {{ state_attr(team_sensor, 'team_name') }}
                       {{ state_attr(team_sensor, 'team_score') }} :
                       {{ state_attr(team_sensor, 'opponent_score') }}
