@@ -362,9 +362,9 @@ actions:
                   data:
                     title: "🏁 Abpfiff"
                     message: >
-                      {% set team_won = state_attr(team_sensor, 'team_winner') %}
-                      {% set opp_won = state_attr(team_sensor, 'opponent_winner') %}
-                      {% set result = 'Sieg!' if team_won else ('Niederlage' if opp_won else 'Unentschieden') %}
+                      {% set team = state_attr(team_sensor, 'team_score') | int(0) %}
+                      {% set opp = state_attr(team_sensor, 'opponent_score') | int(0) %}
+                      {% set result = 'Sieg!' if team > opp else ('Niederlage' if team < opp else 'Unentschieden') %}
                       Endstand: {{ state_attr(team_sensor, 'team_name') }}
                       {{ state_attr(team_sensor, 'team_score') }} :
                       {{ state_attr(team_sensor, 'opponent_score') }}
