@@ -4,86 +4,115 @@ blueprint:
   homeassistant:
     min_version: 2025.6.0
   domain: automation
+  author: ArnaudFeld
   input:
-    mobile_app_device:
-      name: Notification Device (required)
-      description: Primary device with Home Assistant Companion App
-      selector:
-        device:
-          integration: mobile_app
-    mobile_app_device_2:
-      name: Notification Device (2)
-      description: Optional second device
-      default: null
-      selector:
-        device:
-          integration: mobile_app
-          multiple: false
-    mobile_app_device_3:
-      name: Notification Device (3)
-      description: Optional third device
-      default: null
-      selector:
-        device:
-          integration: mobile_app
-          multiple: false
-    send_to_ha:
-      name: Send to HA
-      description: Additionally show as persistent notification in HA
-      default: false
-      selector:
-        boolean: {}
-    show_icon:
-      name: Show integration icon
-      description: Show integration icon in push notification
-      default: true
-      selector:
-        boolean: {}
-    reminder_hours:
-      name: Reminder interval
-      description: Repeated reminders for available updates every X hours (0 = off)
-      default: 0
-      selector:
-        number:
-          min: 0
-          max: 168
-          unit_of_measurement: hours
-    take_backup:
-      name: Create backup
-      description: Partial backup before update installation
-      default: true
-      selector:
-        boolean: {}
-    changelog_urls:
-      name: Changelog URLs
-      description: "Additional changelog URLs for add-ons. Format: update.entity_id: https://url.com"
-      default: {}
-      selector:
-        object: {}
-    only_after:
-      name: Only after
-      description: Send notifications only after this time
-      default: "00:00:00"
-      selector:
-        time: {}
-    only_before:
-      name: Only before
-      description: Send notifications only before this time
-      default: "23:59:59"
-      selector:
-        time: {}
-    notification_channel:
-      name: Channel/Group
-      description: Channel (Android) and Group (iOS) for notifications
-      default: "Updates"
-      selector:
-        text: {}
-    status_bar_icon:
-      name: Status bar icon
-      description: Icon in the status bar
-      default: "mdi:package-up"
-      selector:
-        icon: {}
+
+    notification_section:
+      name: Notification Devices
+      description: Where notifications are sent to.
+      icon: mdi:cellphone
+      collapsed: false
+      input:
+        mobile_app_device:
+          name: Notification Device (required)
+          description: Primary device with Home Assistant Companion App
+          selector:
+            device:
+              integration: mobile_app
+        mobile_app_device_2:
+          name: Notification Device (2)
+          description: Optional second device
+          default: null
+          selector:
+            device:
+              integration: mobile_app
+              multiple: false
+        mobile_app_device_3:
+          name: Notification Device (3)
+          description: Optional third device
+          default: null
+          selector:
+            device:
+              integration: mobile_app
+              multiple: false
+        send_to_ha:
+          name: Send to HA
+          description: Additionally show as persistent notification in HA
+          default: false
+          selector:
+            boolean: {}
+
+    display_section:
+      name: Display
+      description: How the notification looks.
+      icon: mdi:palette-outline
+      collapsed: true
+      input:
+        show_icon:
+          name: Show integration icon
+          description: Show integration icon in push notification
+          default: true
+          selector:
+            boolean: {}
+        notification_channel:
+          name: Channel/Group
+          description: Channel (Android) and Group (iOS) for notifications
+          default: "Updates"
+          selector:
+            text: {}
+        status_bar_icon:
+          name: Status bar icon
+          description: Icon in the status bar
+          default: "mdi:package-up"
+          selector:
+            icon: {}
+
+    behavior_section:
+      name: Update Behavior
+      description: Reminders, backups and additional changelog links.
+      icon: mdi:cog-outline
+      collapsed: true
+      input:
+        reminder_hours:
+          name: Reminder interval
+          description: Repeated reminders for available updates every X hours (0 = off)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 168
+              unit_of_measurement: hours
+        take_backup:
+          name: Create backup
+          description: Partial backup before update installation
+          default: true
+          selector:
+            boolean: {}
+        changelog_urls:
+          name: Changelog URLs
+          description: "Additional changelog URLs for add-ons. Format: update.entity_id: https://url.com"
+          default: {}
+          selector:
+            object: {}
+
+    schedule_section:
+      name: Time Window
+      description: The period during which notifications are allowed to be sent.
+      icon: mdi:clock-outline
+      collapsed: true
+      input:
+        only_after:
+          name: Only after
+          description: Send notifications only after this time
+          default: "00:00:00"
+          selector:
+            time: {}
+        only_before:
+          name: Only before
+          description: Send notifications only before this time
+          default: "23:59:59"
+          selector:
+            time: {}
 
 mode: parallel
 max: 100
@@ -184,7 +213,7 @@ action:
                 {{ '' }}
               {% endif %}
             entity_id: "update.{{ notification_tag }}"
-        - service: update.install
+        - action: update.install
           data:
             entity_id: "{{ entity_id }}"
             backup: >-
@@ -194,7 +223,7 @@ action:
             - condition: template
               value_template: "{{ notification_tag != '' }}"
           then:
-            - service: "{{ notify_service_1 }}"
+            - action: "{{ notify_service_1 }}"
               data:
                 message: clear_notification
                 data:
@@ -203,7 +232,7 @@ action:
                 - condition: template
                   value_template: "{{ has_device_2 }}"
               then:
-                - service: "{{ notify_service_2 | trim }}"
+                - action: "{{ notify_service_2 | trim }}"
                   data:
                     message: clear_notification
                     data:
@@ -212,7 +241,7 @@ action:
                 - condition: template
                   value_template: "{{ has_device_3 }}"
               then:
-                - service: "{{ notify_service_3 | trim }}"
+                - action: "{{ notify_service_3 | trim }}"
                   data:
                     message: clear_notification
                     data:
@@ -231,14 +260,14 @@ action:
                 {{ '' }}
               {% endif %}
             entity_id: "update.{{ notification_tag }}"
-        - service: update.skip
+        - action: update.skip
           data:
             entity_id: "{{ entity_id }}"
         - if:
             - condition: template
               value_template: "{{ notification_tag != '' }}"
           then:
-            - service: "{{ notify_service_1 }}"
+            - action: "{{ notify_service_1 }}"
               data:
                 message: clear_notification
                 data:
@@ -247,7 +276,7 @@ action:
                 - condition: template
                   value_template: "{{ has_device_2 }}"
               then:
-                - service: "{{ notify_service_2 | trim }}"
+                - action: "{{ notify_service_2 | trim }}"
                   data:
                     message: clear_notification
                     data:
@@ -256,7 +285,7 @@ action:
                 - condition: template
                   value_template: "{{ has_device_3 }}"
               then:
-                - service: "{{ notify_service_3 | trim }}"
+                - action: "{{ notify_service_3 | trim }}"
                   data:
                     message: clear_notification
                     data:
@@ -276,7 +305,7 @@ action:
             sequence:
               - variables:
                   entity_id: "{{ repeat.item }}"
-              - service: "{{ notify_service_1 }}"
+              - action: "{{ notify_service_1 }}"
                 data:
                   message: clear_notification
                   data:
@@ -285,7 +314,7 @@ action:
                   - condition: template
                     value_template: "{{ has_device_2 }}"
                 then:
-                  - service: "{{ notify_service_2 | trim }}"
+                  - action: "{{ notify_service_2 | trim }}"
                     data:
                       message: clear_notification
                       data:
@@ -294,7 +323,7 @@ action:
                   - condition: template
                     value_template: "{{ has_device_3 }}"
                 then:
-                  - service: "{{ notify_service_3 | trim }}"
+                  - action: "{{ notify_service_3 | trim }}"
                     data:
                       message: clear_notification
                       data:
@@ -303,7 +332,7 @@ action:
                   - condition: template
                     value_template: "{{ send_to_ha }}"
                 then:
-                  - service: persistent_notification.dismiss
+                  - action: persistent_notification.dismiss
                     data:
                       notification_id: "{{ entity_id[7:] }}"
 
@@ -380,7 +409,6 @@ action:
                         New version: {{ latest }}
                         Installed: {{ installed }}
                         {% if cleaned_summary | trim != '' %}{{ cleaned_summary }}{% endif %}
-                      
                       notify_data_android:
                         tag: "{{ entity_id[7:] }}"
                         channel: !input notification_channel
@@ -398,7 +426,6 @@ action:
                             {% set actions = actions + [{'action': 'skip-update', 'title': 'Skip'}] %}
                           {% endif %}
                           {{ actions }}
-
                       notify_data_ios:
                         tag: "{{ entity_id[7:] }}"
                         group: !input notification_channel
@@ -420,7 +447,7 @@ action:
                         before: !input only_before
                     then:
                       # --- DEVICE 1 ---
-                      - service: "{{ notify_service_1 }}"
+                      - action: "{{ notify_service_1 }}"
                         data:
                           title: "{{ category_icon }} {{ title }}"
                           message: "{{ message_plain if manufacturer_1 == 'Apple' else message_html }}"
@@ -430,13 +457,12 @@ action:
                             {% else %}
                               {{ dict(notify_data_android, action_data={'tag': notify_data_android.tag}) }}
                             {% endif %}
-
                       # --- DEVICE 2 ---
                       - if:
                           - condition: template
                             value_template: "{{ has_device_2 }}"
                         then:
-                          - service: "{{ notify_service_2 | trim }}"
+                          - action: "{{ notify_service_2 | trim }}"
                             data:
                               title: "{{ category_icon }} {{ title }}"
                               message: "{{ message_plain if manufacturer_2 == 'Apple' else message_html }}"
@@ -446,13 +472,12 @@ action:
                                 {% else %}
                                   {{ dict(notify_data_android, action_data={'tag': notify_data_android.tag}) }}
                                 {% endif %}
-
                       # --- DEVICE 3 ---
                       - if:
                           - condition: template
                             value_template: "{{ has_device_3 }}"
                         then:
-                          - service: "{{ notify_service_3 | trim }}"
+                          - action: "{{ notify_service_3 | trim }}"
                             data:
                               title: "{{ category_icon }} {{ title }}"
                               message: "{{ message_plain if manufacturer_3 == 'Apple' else message_html }}"
@@ -462,21 +487,20 @@ action:
                                 {% else %}
                                   {{ dict(notify_data_android, action_data={'tag': notify_data_android.tag}) }}
                                 {% endif %}
-                  - if:
-                      - condition: template
-                        value_template: "{{ send_to_ha }}"
-                    then:
-                      - service: persistent_notification.create
-                        data:
-                          notification_id: "{{ entity_id[7:] }}"
-                          title: "{{ category_icon }} {{ title }}"
-                          message: >-
-                            New version: {{ latest }}
-                            Installed: {{ installed }}
-                            {% if summary is string %}{{ summary }}{% endif %}
-
-                            [Open]({{ url }})
-                            {% if changelog is string and changelog | trim != '' %}[Changelog]({{ changelog }}){% endif %}
+                      - if:
+                          - condition: template
+                            value_template: "{{ send_to_ha }}"
+                        then:
+                          - action: persistent_notification.create
+                            data:
+                              notification_id: "{{ entity_id[7:] }}"
+                              title: "{{ category_icon }} {{ title }}"
+                              message: >-
+                                New version: {{ latest }}
+                                Installed: {{ installed }}
+                                {% if summary is string %}{{ summary }}{% endif %}
+                                [Open]({{ url }})
+                                {% if changelog is string and changelog | trim != '' %}[Changelog]({{ changelog }}){% endif %}
               - if:
                   - condition: template
                     value_template: "{{ in_progress }}"
@@ -490,7 +514,7 @@ action:
                         notification_icon: !input status_bar_icon
                         action_data:
                           tag: "{{ entity_id[7:] }}"
-                  - service: "{{ notify_service_1 }}"
+                  - action: "{{ notify_service_1 }}"
                     data:
                       title: "{{ category_icon }} {{ title }}"
                       message: "{{ update_message }}"
@@ -499,7 +523,7 @@ action:
                       - condition: template
                         value_template: "{{ has_device_2 }}"
                     then:
-                      - service: "{{ notify_service_2 | trim }}"
+                      - action: "{{ notify_service_2 | trim }}"
                         data:
                           title: "{{ category_icon }} {{ title }}"
                           message: "{{ update_message }}"
@@ -508,7 +532,7 @@ action:
                       - condition: template
                         value_template: "{{ has_device_3 }}"
                     then:
-                      - service: "{{ notify_service_3 | trim }}"
+                      - action: "{{ notify_service_3 | trim }}"
                         data:
                           title: "{{ category_icon }} {{ title }}"
                           message: "{{ update_message }}"
