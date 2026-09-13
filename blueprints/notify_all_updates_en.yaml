@@ -1,6 +1,12 @@
 blueprint:
   name: Update notifications (All updates + manual trigger)
-  description: "Notification for all available updates (auto & manual) | Version: 2026.06.23"
+  description: >
+    Notification for all available updates (auto & manual) | Version:
+    2026.06.23
+
+      - Notification disappears after installation
+      - Backup before installation
+      - Configurable reminder interval
   homeassistant:
     min_version: 2025.6.0
   domain: automation
