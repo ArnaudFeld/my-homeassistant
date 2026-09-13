@@ -314,12 +314,12 @@ action:
       - condition: template
         value_template: "{{ count_all == 0 }}"
     then:
-      - service: "{{ notify_service_1 }}"
+      - action: "{{ notify_service_1 }}"
         data:
           message: clear_notification
           data:
             tag: battery-warning
-      - service: "{{ notify_service_1 }}"
+      - action: "{{ notify_service_1 }}"
         data:
           message: clear_notification
           data:
@@ -328,12 +328,12 @@ action:
           - condition: template
             value_template: "{{ has_device_2 }}"
         then:
-          - service: "{{ notify_service_2 | trim }}"
+          - action: "{{ notify_service_2 | trim }}"
             data:
               message: clear_notification
               data:
                 tag: battery-warning
-          - service: "{{ notify_service_2 | trim }}"
+          - action: "{{ notify_service_2 | trim }}"
             data:
               message: clear_notification
               data:
@@ -342,12 +342,12 @@ action:
           - condition: template
             value_template: "{{ has_device_3 }}"
         then:
-          - service: "{{ notify_service_3 | trim }}"
+          - action: "{{ notify_service_3 | trim }}"
             data:
               message: clear_notification
               data:
                 tag: battery-warning
-          - service: "{{ notify_service_3 | trim }}"
+          - action: "{{ notify_service_3 | trim }}"
             data:
               message: clear_notification
               data:
@@ -382,19 +382,19 @@ action:
               clickAction: /maintenance
               push:
                 interruption-level: "{{ normal_interruption_level }}"
-      - service: "{{ notify_service_1 }}"
+      - action: "{{ notify_service_1 }}"
         data: "{{ notify_data_normal }}"
       - if:
           - condition: template
             value_template: "{{ has_device_2 }}"
         then:
-          - service: "{{ notify_service_2 | trim }}"
+          - action: "{{ notify_service_2 | trim }}"
             data: "{{ notify_data_normal }}"
       - if:
           - condition: template
             value_template: "{{ has_device_3 }}"
         then:
-          - service: "{{ notify_service_3 | trim }}"
+          - action: "{{ notify_service_3 | trim }}"
             data: "{{ notify_data_normal }}"
 
   # --- Critical warning (below critical_threshold) ---
@@ -420,19 +420,19 @@ action:
                   name: default
                   critical: "{{ 1 if critical_interruption_level == 'critical' else 0 }}"
                   volume: 1.0
-      - service: "{{ notify_service_1 }}"
+      - action: "{{ notify_service_1 }}"
         data: "{{ notify_data_critical }}"
       - if:
           - condition: template
             value_template: "{{ has_device_2 }}"
         then:
-          - service: "{{ notify_service_2 | trim }}"
+          - action: "{{ notify_service_2 | trim }}"
             data: "{{ notify_data_critical }}"
       - if:
           - condition: template
             value_template: "{{ has_device_3 }}"
         then:
-          - service: "{{ notify_service_3 | trim }}"
+          - action: "{{ notify_service_3 | trim }}"
             data: "{{ notify_data_critical }}"
 
   # --- Persistent notification in HA ---
