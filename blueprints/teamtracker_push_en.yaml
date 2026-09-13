@@ -5,32 +5,23 @@ blueprint:
     integration. | Version: 2026.06.26
 
     The following events are supported:
-
     - Reminder X minutes before kickoff
-
     - Notification when the game starts
-
     - Halftime score
-
     - Goals (your team & opponent, each labeled: took the lead / equalized /
       extended the lead / reduced the gap)
-
     - Final score including win / loss / draw
-
 
     Requirement: The TeamTracker integration (vasqued2/ha-teamtracker, via
     HACS) must already be set up and provide a sensor for your team.
-
 
     Requirement for notifications: The selected devices must have the Home
     Assistant Companion App installed and already connected to this HA
     instance, so a working "notify.mobile_app_<device_name>" service exists.
     Without that, the notification will fail.
 
-
     Up to 3 devices can be selected for notifications (1 required, 2
     optional).
-
 
     Note on halftime detection: it is based on the "quarter" attribute
     changing from 1 to 2. Depending on the league/API, this value may be
@@ -38,110 +29,114 @@ blueprint:
     doubt, check the exact attribute value during a live game under
     Developer Tools > States and adjust if needed.
 
-
     Known limitations:
-
     - Your team's goal and the opponent's goal share one switch
       (notify_goal), they cannot be turned on/off separately.
-
     - The goal message wording (took the lead / equalized / extended the
       lead / reduced the gap) assumes the score changes by 1 goal at a time.
       If an API update jumps by more than 1 goal at once, the wording may be
       slightly off - the score shown itself is not affected.
-
     - The kickoff reminder uses a once-per-minute time trigger
       (time_pattern) to check the time remaining until kickoff. This is
       a technical limitation (Home Assistant has no built-in trigger for
       "X minutes before a dynamic future time") and not a bug, even though
       it will show up as "triggered" every minute in the logbook.
+  homeassistant:
+    min_version: 2024.6.0
   domain: automation
+  author: ArnaudFeld
   source_url: https://raw.githubusercontent.com/ArnaudFeld/my-homeassistant/main/blueprints/teamtracker_push_en.yaml
   input:
-    team_sensor:
-      name: TeamTracker sensor
-      description: The sensor for your team (from the TeamTracker integration).
-      selector:
-        entity:
-          filter:
-            - domain: sensor
-              integration: teamtracker
 
-    mobile_app_device:
-      name: Device for notifications (required)
-      description: Main device with the Home Assistant Companion App.
-      selector:
-        device:
-          filter:
-            - integration: mobile_app
+    setup_section:
+      name: Setup
+      description: Team sensor and notification devices.
+      icon: mdi:cog-outline
+      collapsed: false
+      input:
+        team_sensor:
+          name: TeamTracker sensor
+          description: The sensor for your team (from the TeamTracker integration).
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  integration: teamtracker
+        mobile_app_device:
+          name: Device for notifications (required)
+          description: Main device with the Home Assistant Companion App.
+          selector:
+            device:
+              filter:
+                - integration: mobile_app
+        mobile_app_device_2:
+          name: Device for notifications (2)
+          description: Optional second device.
+          default: null
+          selector:
+            device:
+              filter:
+                - integration: mobile_app
+        mobile_app_device_3:
+          name: Device for notifications (3)
+          description: Optional third device.
+          default: null
+          selector:
+            device:
+              filter:
+                - integration: mobile_app
 
-    mobile_app_device_2:
-      name: Device for notifications (2)
-      description: Optional second device.
-      default: null
-      selector:
-        device:
-          filter:
-            - integration: mobile_app
-
-    mobile_app_device_3:
-      name: Device for notifications (3)
-      description: Optional third device.
-      default: null
-      selector:
-        device:
-          filter:
-            - integration: mobile_app
-
-    notify_kickoff_reminder:
-      name: Kickoff reminder enabled
-      description: Send a reminder X minutes before the game starts.
-      default: true
-      selector:
-        boolean:
-
-    kickoff_reminder_minutes:
-      name: Kickoff reminder lead time
-      description: How many minutes before kickoff to send the reminder.
-      default: 30
-      selector:
-        number:
-          min: 1
-          max: 180
-          unit_of_measurement: minutes
-          mode: box
-
-    notify_kickoff:
-      name: Kickoff notification enabled
-      description: Notification when the game actually starts (PRE -> IN).
-      default: true
-      selector:
-        boolean:
-
-    notify_halftime:
-      name: Halftime notification enabled
-      description: Notification with the halftime score.
-      default: true
-      selector:
-        boolean:
-
-    notify_goal:
-      name: Goal notifications enabled
-      description: >
-        Notification for both your team's goal AND the opponent's goal, each
-        with a label (took the lead / equalized / extended the lead /
-        reduced the gap).
-      default: true
-      selector:
-        boolean:
-
-    notify_final:
-      name: Final score notification enabled
-      description: >
-        Notification when the game ends, with the final score and result
-        (win / loss / draw).
-      default: true
-      selector:
-        boolean:
+    events_section:
+      name: Events
+      description: Which game events trigger a notification.
+      icon: mdi:soccer
+      collapsed: true
+      input:
+        notify_kickoff_reminder:
+          name: Kickoff reminder enabled
+          description: Send a reminder X minutes before the game starts.
+          default: true
+          selector:
+            boolean:
+        kickoff_reminder_minutes:
+          name: Kickoff reminder lead time
+          description: How many minutes before kickoff to send the reminder.
+          default: 30
+          selector:
+            number:
+              min: 1
+              max: 180
+              unit_of_measurement: minutes
+              mode: box
+        notify_kickoff:
+          name: Kickoff notification enabled
+          description: Notification when the game actually starts (PRE -> IN).
+          default: true
+          selector:
+            boolean:
+        notify_halftime:
+          name: Halftime notification enabled
+          description: Notification with the halftime score.
+          default: true
+          selector:
+            boolean:
+        notify_goal:
+          name: Goal notifications enabled
+          description: >
+            Notification for both your team's goal AND the opponent's goal, each
+            with a label (took the lead / equalized / extended the lead /
+            reduced the gap).
+          default: true
+          selector:
+            boolean:
+        notify_final:
+          name: Final score notification enabled
+          description: >
+            Notification when the game ends, with the final score and result
+            (win / loss / draw).
+          default: true
+          selector:
+            boolean:
 
 mode: queued
 max: 5
@@ -179,29 +174,24 @@ triggers:
   - trigger: time_pattern
     minutes: "/1"
     id: kickoff_reminder
-
   - trigger: state
     entity_id: !input team_sensor
     from: PRE
     to: IN
     id: kickoff_start
-
   - trigger: state
     entity_id: !input team_sensor
     attribute: quarter
     to: "2"
     id: halftime
-
   - trigger: state
     entity_id: !input team_sensor
     attribute: team_score
     id: goal_team
-
   - trigger: state
     entity_id: !input team_sensor
     attribute: opponent_score
     id: goal_opponent
-
   - trigger: state
     entity_id: !input team_sensor
     from: IN
@@ -237,7 +227,7 @@ actions:
           - repeat:
               for_each: "{{ notify_services }}"
               sequence:
-                - service: "{{ repeat.item }}"
+                - action: "{{ repeat.item }}"
                   data:
                     title: "⏰ Kickoff coming up"
                     message: >
@@ -255,7 +245,7 @@ actions:
           - repeat:
               for_each: "{{ notify_services }}"
               sequence:
-                - service: "{{ repeat.item }}"
+                - action: "{{ repeat.item }}"
                   data:
                     title: "⚽ Kickoff!"
                     message: >
@@ -272,7 +262,7 @@ actions:
           - repeat:
               for_each: "{{ notify_services }}"
               sequence:
-                - service: "{{ repeat.item }}"
+                - action: "{{ repeat.item }}"
                   data:
                     title: "🟨 Halftime"
                     message: >
@@ -294,7 +284,7 @@ actions:
           - repeat:
               for_each: "{{ notify_services }}"
               sequence:
-                - service: "{{ repeat.item }}"
+                - action: "{{ repeat.item }}"
                   data:
                     title: "⚽ Goal!"
                     message: >
@@ -326,7 +316,7 @@ actions:
           - repeat:
               for_each: "{{ notify_services }}"
               sequence:
-                - service: "{{ repeat.item }}"
+                - action: "{{ repeat.item }}"
                   data:
                     title: "⚠️ Opponent goal"
                     message: >
@@ -355,7 +345,7 @@ actions:
           - repeat:
               for_each: "{{ notify_services }}"
               sequence:
-                - service: "{{ repeat.item }}"
+                - action: "{{ repeat.item }}"
                   data:
                     title: "🏁 Final whistle"
                     message: >
