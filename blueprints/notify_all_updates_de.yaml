@@ -1,6 +1,12 @@
 blueprint:
   name: Update notifications (Alle Updates + Manueller Start)
-  description: "Benachrichtigung für alle verfügbaren Updates (Auto & Manuell) | Version: 2026.06.23 - Instant Android Clear (No Sticky)"
+  description: >
+    Benachrichtigung für alle verfügbaren Updates (Auto & Manuell) | Version:
+    2026.06.23 - Instant Android Clear (No Sticky)
+
+      - Benachrichtigung verschwindet nach Installation
+      - Backup vor Installation
+      - Erinnerungs-Intervall konfigurierbar
   homeassistant:
     min_version: 2025.6.0
   domain: automation
